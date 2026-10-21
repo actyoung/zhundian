@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.os.Build;
 import android.view.View;
 
 public final class SevenSegmentView extends View {
@@ -20,6 +21,7 @@ public final class SevenSegmentView extends View {
     private float separatorWidth;
     private float displayScale = 1f;
     private int currentSize = 1;
+    private boolean highRefresh;
 
     public SevenSegmentView(Context context) {
         super(context);
@@ -43,6 +45,13 @@ public final class SevenSegmentView extends View {
     public void setDisplayScale(float scale) {
         displayScale = Math.max(.6f, Math.min(2.2f, scale));
         setSize(currentSize);
+    }
+
+    public void setHighRefresh(boolean enabled) {
+        if (Build.VERSION.SDK_INT >= 35 && highRefresh != enabled) {
+            highRefresh = enabled;
+            setRequestedFrameRate(enabled ? REQUESTED_FRAME_RATE_CATEGORY_HIGH : REQUESTED_FRAME_RATE_CATEGORY_NORMAL);
+        }
     }
 
     public void setTime(String value) {

@@ -19,6 +19,7 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.Gravity;
+import android.view.Choreographer;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -48,22 +49,44 @@ public final class OverlayService extends Service {
     private WindowManager.LayoutParams params;
     private LinearLayout overlay;
     private SevenSegmentView digits;
+    private TextView sourceLabel;
     private PowerManager powerManager;
+    private long lastStatusSecond = -1;
     private boolean safeMode;
     private float downX;
     private float downY;
     private int originX;
     private int originY;
-    private final Runnable ticker = new Runnable() {
+    private final Choreographer.FrameCallback frameTicker = new Choreographer.FrameCallback() {
         @Override
-        public void run() {
-            if (digits == null) return;
-            long now = System.currentTimeMillis();
-            clockDate.setTime(now);
-            digits.setTime(clockFormat.format(clockDate));
-            handler.postDelayed(this, powerManager.isInteractive() ? 16 : 1000);
+        public void doFrame(long frameTimeNanos) {
+            updateClock();
+            if (powerManager.isInteractive()) Choreographer.getInstance().postFrameCallback(this);
+            else handler.postDelayed(slowTicker, 1000);
         }
     };
+    private final Runnable slowTicker = new Runnable() {
+        @Override
+        public void run() {
+            updateClock();
+            if (powerManager.isInteractive()) Choreographer.getInstance().postFrameCallback(frameTicker);
+            else handler.postDelayed(this, 1000);
+        }
+    };
+
+    private void updateClock() {
+        if (digits == null) return;
+        long now = TimeAuthority.nowMillis();
+        clockDate.setTime(now);
+        digits.setTime(clockFormat.format(clockDate));
+        if (now / 1000 != lastStatusSecond) {
+            lastStatusSecond = now / 1000;
+            sourceLabel.setText("准点 · " + TimeAuthority.shortStatus());
+            TimeAuthority.syncIfDue(getApplicationContext(), false);
+            long target = getSharedPreferences("clock", MODE_PRIVATE).getLong("targetMillis", 0);
+            digits.setHighRefresh(target > now && target - now <= 120_000);
+        }
+    }
 
     public static boolean isRunning() {
         return running;
@@ -89,6 +112,7 @@ public final class OverlayService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        TimeAuthority.initialize(this);
         instance = this;
     }
 
@@ -114,6 +138,7 @@ public final class OverlayService extends Service {
         if (!running) {
             startForegroundNotification();
             showOverlay();
+            TimeAuthority.syncIfDue(getApplicationContext(), false);
         } else {
             applyConfig();
         }
@@ -135,7 +160,7 @@ public final class OverlayService extends Service {
         Notification notification = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_menu_recent_history)
                 .setContentTitle("准点悬浮时钟")
-                .setContentText("正在显示手机时间")
+                .setContentText("正在显示校准时间")
                 .setContentIntent(openIntent)
                 .setOngoing(true)
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel, "关闭", stopIntent)
@@ -155,12 +180,12 @@ public final class OverlayService extends Service {
         int horizontal = dp(11);
         overlay.setPadding(horizontal, dp(9), horizontal, dp(8));
 
-        TextView label = new TextView(this);
-        label.setText("准点 · 手机时间");
-        label.setTextColor(Color.rgb(178, 215, 169));
-        label.setTextSize(9);
-        label.setTypeface(null, 1);
-        overlay.addView(label);
+        sourceLabel = new TextView(this);
+        sourceLabel.setText("准点 · " + TimeAuthority.shortStatus());
+        sourceLabel.setTextColor(Color.rgb(178, 215, 169));
+        sourceLabel.setTextSize(9);
+        sourceLabel.setTypeface(null, 1);
+        overlay.addView(sourceLabel);
         digits = new SevenSegmentView(this);
         LinearLayout.LayoutParams digitLayout = new LinearLayout.LayoutParams(-2, -2);
         digitLayout.topMargin = dp(5);
@@ -180,7 +205,7 @@ public final class OverlayService extends Service {
             windowManager.addView(overlay, params);
             running = true;
             updateVisibility();
-            handler.post(ticker);
+            Choreographer.getInstance().postFrameCallback(frameTicker);
         } catch (Exception exception) {
             stopSelf();
         }
@@ -251,7 +276,8 @@ public final class OverlayService extends Service {
     public void onDestroy() {
         running = false;
         instance = null;
-        handler.removeCallbacks(ticker);
+        Choreographer.getInstance().removeFrameCallback(frameTicker);
+        handler.removeCallbacks(slowTicker);
         if (overlay != null && windowManager != null) {
             try {
                 windowManager.removeView(overlay);

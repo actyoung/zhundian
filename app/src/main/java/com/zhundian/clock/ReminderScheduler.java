@@ -31,7 +31,7 @@ final class ReminderScheduler {
     static boolean isArmed(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         long target = prefs.getLong("targetMillis", 0);
-        return canScheduleExact(context) && target > System.currentTimeMillis()
+        return canScheduleExact(context) && target > TimeAuthority.nowMillis()
                 && prefs.getLong(SCHEDULED_TARGET, 0) == target;
     }
 
@@ -40,7 +40,7 @@ final class ReminderScheduler {
         if (alarms == null) return;
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         long target = prefs.getLong("targetMillis", 0);
-        long now = System.currentTimeMillis();
+        long now = TimeAuthority.nowMillis();
         PendingIntent fire = PendingIntent.getBroadcast(context, 0,
                 new Intent(context, ReminderReceiver.class).setAction(ACTION_FIRE)
                         .putExtra(EXTRA_TARGET, target),
@@ -59,7 +59,8 @@ final class ReminderScheduler {
                 new Intent(context, MainActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         try {
-            alarms.setAlarmClock(new AlarmManager.AlarmClockInfo(target, show), fire);
+            long trigger = System.currentTimeMillis() + Math.max(1, target - now);
+            alarms.setAlarmClock(new AlarmManager.AlarmClockInfo(trigger, show), fire);
             prefs.edit().putLong(SCHEDULED_TARGET, target).apply();
         } catch (SecurityException ignored) {
             // The user can revoke exact-alarm access between the permission check and scheduling.
@@ -70,7 +71,7 @@ final class ReminderScheduler {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         if (target <= 0 || target != prefs.getLong("targetMillis", 0)
                 || target == prefs.getLong("lastAlertedTarget", 0)) return;
-        if (System.currentTimeMillis() < target) {
+        if (TimeAuthority.nowMillis() < target) {
             schedule(context);
             return;
         }

@@ -19,6 +19,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.Gravity
+import android.view.Choreographer
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -72,16 +73,20 @@ class MainActivity : Activity() {
     private var countdownDigits: SevenSegmentView? = null
     private var previewDigits: SevenSegmentView? = null
     private var countdownCaption: TextView? = null
+    private var sourceLabel: TextView? = null
+    private var calibrationDetails: TextView? = null
     private var lastReachedTarget = 0L
-    private val ticker = object : Runnable {
-        override fun run() {
+    private var lastStatusSecond = -1L
+    private val ticker = object : Choreographer.FrameCallback {
+        override fun doFrame(frameTimeNanos: Long) {
             updateClock()
-            handler.postDelayed(this, 16)
+            Choreographer.getInstance().postFrameCallback(this)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TimeAuthority.initialize(this)
         window.statusBarColor = background
         window.navigationBarColor = Color.rgb(10, 14, 12)
         window.decorView.systemUiVisibility = 0
@@ -115,20 +120,21 @@ class MainActivity : Activity() {
             launchOverlay()
         }
         ReminderScheduler.schedule(this)
+        TimeAuthority.syncIfDue(applicationContext, false)
         render()
-        handler.removeCallbacks(ticker)
-        handler.post(ticker)
+        Choreographer.getInstance().removeFrameCallback(ticker)
+        Choreographer.getInstance().postFrameCallback(ticker)
     }
 
     override fun onPause() {
-        handler.removeCallbacks(ticker)
+        Choreographer.getInstance().removeFrameCallback(ticker)
         OverlayService.setAppVisible(false)
         super.onPause()
     }
 
     private fun loadConfig() {
         targetMillis = prefs.getLong("targetMillis", 0)
-        if (targetMillis < System.currentTimeMillis() - 60_000L) {
+        if (targetMillis < TimeAuthority.nowMillis() - 60_000L) {
             targetMillis = nextHour()
             prefs.edit().putLong("targetMillis", targetMillis).apply()
         }
@@ -141,6 +147,7 @@ class MainActivity : Activity() {
     }
 
     private fun nextHour(): Long = Calendar.getInstance().apply {
+        timeInMillis = TimeAuthority.nowMillis()
         add(Calendar.HOUR_OF_DAY, 1)
         set(Calendar.MINUTE, 0)
         set(Calendar.SECOND, 0)
@@ -153,6 +160,9 @@ class MainActivity : Activity() {
         countdownDigits = null
         previewDigits = null
         countdownCaption = null
+        sourceLabel = null
+        calibrationDetails = null
+        lastStatusSecond = -1
         root.removeAllViews()
         root.background = gridBackground()
 
@@ -190,7 +200,7 @@ class MainActivity : Activity() {
     }
 
     private fun renderClock(parent: LinearLayout) {
-        header(parent, "准点", dateFormat.format(Date()), android.R.drawable.ic_menu_preferences) {
+        header(parent, "准点", dateFormat.format(Date(TimeAuthority.nowMillis())), android.R.drawable.ic_menu_preferences) {
             navigate(Screen.SETTINGS)
         }
         space(parent, 9)
@@ -200,8 +210,10 @@ class MainActivity : Activity() {
         clockDigits = SevenSegmentView(this).apply { setDisplayScale(min(1.9f, available / 166f)) }
         parent.addView(clockDigits)
         space(parent, 3)
-        val source = text("●  手机系统时间", 12f, muted)
-        parent.addView(source)
+        sourceLabel = text("●  ${TimeAuthority.status()}", 12f, muted).apply {
+            setOnClickListener { TimeAuthority.syncIfDue(applicationContext, true) }
+        }
+        parent.addView(sourceLabel)
         space(parent, 10)
         divider(parent)
         space(parent, 12)
@@ -233,7 +245,7 @@ class MainActivity : Activity() {
         space(parent, 8)
         divider(parent)
 
-        if (!ReminderScheduler.canScheduleExact(this) && (vibrate || sound) && targetMillis > System.currentTimeMillis()) {
+        if (!ReminderScheduler.canScheduleExact(this) && (vibrate || sound) && targetMillis > TimeAuthority.nowMillis()) {
             space(parent, 14)
             val notice = action("允许精确提醒，到点才能在后台提醒", true) { requestExactAlarm() }
             notice.background = shape(Color.rgb(50, 39, 26), Color.rgb(165, 109, 55))
@@ -248,7 +260,7 @@ class MainActivity : Activity() {
         val status = when {
             !vibrate && !sound -> "到点提醒未开启"
             ReminderScheduler.isArmed(this) -> "到点提醒已就绪"
-            targetMillis <= System.currentTimeMillis() -> "目标时间已到"
+            targetMillis <= TimeAuthority.nowMillis() -> "目标时间已到"
             else -> "到点提醒待授权"
         }
         parent.addView(text(status, 12f, muted).apply { gravity = Gravity.CENTER })
@@ -298,7 +310,7 @@ class MainActivity : Activity() {
             setPadding(dp(13), dp(10), dp(13), dp(8))
         }
         previewBand.addView(preview, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
-        preview.addView(text("准点 · 手机时间", 10f, muted, true))
+        preview.addView(text("准点 · 校准时间", 10f, muted, true))
         previewDigits = SevenSegmentView(this).apply {
             setSize(size)
             setDisplayScale(1.08f)
@@ -353,7 +365,16 @@ class MainActivity : Activity() {
 
     private fun renderSettings(parent: LinearLayout) {
         header(parent, "设置", "提醒与悬浮窗管理")
-        space(parent, 32)
+        space(parent, 21)
+        section(parent, "时间校准")
+        space(parent, 10)
+        calibrationDetails = text(TimeAuthority.details(), 12f, muted).also { parent.addView(it) }
+        space(parent, 10)
+        parent.addView(action("立即校准", false) {
+            TimeAuthority.syncIfDue(applicationContext, true)
+            calibrationDetails?.text = TimeAuthority.details()
+        })
+        space(parent, 24)
         section(parent, "到点提醒")
         space(parent, 12)
         settingSwitch(parent, "到点震动", "目标时刻触发一次", vibrate) {
@@ -403,6 +424,7 @@ class MainActivity : Activity() {
         quick.addView(Space(this), LinearLayout.LayoutParams(dp(8), 1))
         quick.addView(action("约 5 分钟后", false) {
             val candidate = Calendar.getInstance().apply {
+                timeInMillis = TimeAuthority.nowMillis()
                 add(Calendar.MINUTE, 5)
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
@@ -419,7 +441,7 @@ class MainActivity : Activity() {
                 selected.set(year, month, day)
                 dateButton.text = SimpleDateFormat("yyyy年M月d日", Locale.CHINA).format(selected.time)
             }, selected.get(Calendar.YEAR), selected.get(Calendar.MONTH), selected.get(Calendar.DAY_OF_MONTH)).apply {
-                datePicker.minDate = System.currentTimeMillis() - 86_400_000L
+                datePicker.minDate = TimeAuthority.nowMillis() - 86_400_000L
             }.show()
         }
         space(body, 13)
@@ -437,7 +459,7 @@ class MainActivity : Activity() {
         body.addView(action("保存目标时间") {
             selected.set(Calendar.SECOND, 0)
             selected.set(Calendar.MILLISECOND, 0)
-            if (selected.timeInMillis <= System.currentTimeMillis()) {
+            if (selected.timeInMillis <= TimeAuthority.nowMillis()) {
                 toast("请选择未来的时间")
             } else {
                 dialog.dismiss()
@@ -461,6 +483,7 @@ class MainActivity : Activity() {
         lastReachedTarget = 0
         prefs.edit().putLong("targetMillis", value).commit()
         ReminderScheduler.schedule(this)
+        TimeAuthority.syncIfDue(applicationContext, false)
         render()
         toast(message)
     }
@@ -514,8 +537,17 @@ class MainActivity : Activity() {
     }
 
     private fun updateClock() {
+        val now = TimeAuthority.nowMillis()
+        if (now / 1000 != lastStatusSecond) {
+            lastStatusSecond = now / 1000
+            sourceLabel?.text = "●  ${TimeAuthority.status()}"
+            calibrationDetails?.text = TimeAuthority.details()
+            TimeAuthority.syncIfDue(applicationContext, false)
+            val highRefresh = targetMillis - now in 1L..120_000L
+            clockDigits?.setHighRefresh(highRefresh)
+            countdownDigits?.setHighRefresh(highRefresh)
+        }
         if (clockDigits == null && previewDigits == null && countdownDigits == null) return
-        val now = System.currentTimeMillis()
         date.time = now
         val value = timeFormat.format(date)
         clockDigits?.setTime(value)
@@ -543,7 +575,7 @@ class MainActivity : Activity() {
 
     private fun targetDay(): String {
         val target = Calendar.getInstance().apply { timeInMillis = targetMillis }
-        val today = Calendar.getInstance()
+        val today = Calendar.getInstance().apply { timeInMillis = TimeAuthority.nowMillis() }
         if (target.get(Calendar.YEAR) == today.get(Calendar.YEAR) && target.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)) return "今天"
         today.add(Calendar.DAY_OF_YEAR, 1)
         if (target.get(Calendar.YEAR) == today.get(Calendar.YEAR) && target.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)) return "明天"
