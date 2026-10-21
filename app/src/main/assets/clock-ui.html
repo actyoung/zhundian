@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b100e">
+  <title>准点 · 悬浮时钟 UI 原型</title>
+  <style>
+    @font-face { font-family: DSEG7; src: url("clock-ui-dseg7.woff2") format("woff2"); font-display: swap; }
+    :root { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: #202826; background: #e9eeeb; font-synthesis: none; }
+    html { height: 100%; }
+    * { box-sizing: border-box; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .workspace { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 25px 20px 32px; }
+    .showcase-bar { width: min(100%, 850px); display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .showcase-title { display: flex; align-items: baseline; gap: 12px; }
+    .showcase-title strong { font-size: 22px; font-weight: 750; }
+    .showcase-title span { color: #66736e; font-size: 13px; }
+    .showcase-nav { display: flex; gap: 4px; padding: 4px; background: #dce5df; border-radius: 8px; }
+    .showcase-nav button { border: 0; border-radius: 5px; background: transparent; color: #56645d; padding: 8px 14px; font-size: 13px; }
+    .showcase-nav button.active { color: #162d27; background: #fff; box-shadow: 0 1px 3px #23483a1a; font-weight: 650; }
+    .phone { position: relative; width: 390px; height: 844px; max-height: calc(100vh - 120px); min-height: 680px; background: #f5f7f6; border: 7px solid #202825; border-radius: 34px; box-shadow: 0 22px 60px #173c2f24; overflow: hidden; display: flex; flex-direction: column; }
+    .status { height: 41px; flex: 0 0 41px; display: flex; align-items: center; justify-content: space-between; padding: 3px 23px 0; color: #26322d; font-size: 13px; font-weight: 680; letter-spacing: 0; }
+    .status-right { display: flex; align-items: center; gap: 6px; }
+    .signal { display: flex; align-items: end; gap: 2px; height: 12px; }
+    .signal b { width: 3px; background: currentColor; border-radius: 1px; }
+    .signal b:nth-child(1) { height: 4px; }.signal b:nth-child(2) { height: 7px; }.signal b:nth-child(3) { height: 10px; }.signal b:nth-child(4) { height: 12px; }
+    .battery { width: 20px; height: 10px; border: 1.5px solid currentColor; border-radius: 2px; position: relative; padding: 1px; }
+    .battery::before { content: ""; position: absolute; width: 2px; height: 4px; right: -4px; top: 2px; background: currentColor; border-radius: 0 2px 2px 0; }
+    .battery::after { content: ""; display: block; height: 100%; width: 68%; background: currentColor; border-radius: 1px; }
+    .view { min-height: 0; flex: 1; overflow-y: auto; scrollbar-width: none; display: none; }
+    .view::-webkit-scrollbar { display: none; }
+    .view.active { display: block; }
+    .content { padding: 15px 23px 24px; }
+    .head { display: flex; justify-content: space-between; align-items: center; min-height: 42px; }
+    .head h1 { margin: 0; font-size: 26px; line-height: 1.2; font-weight: 730; }
+    .head p { margin: 4px 0 0; color: #72817a; font-size: 12px; }
+    .icon-button { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: #374d42; }
+    .icon-button:hover { background: #e8eeea; }
+    .icon-button i, .nav-item i, .row-icon i, .primary i, .small-action i { width: 19px; height: 19px; stroke-width: 2; }
+    .eyebrow { font-size: 12px; color: #718079; font-weight: 600; }
+    .live { margin-top: 34px; padding: 21px 17px 18px; border-radius: 6px; background: #101b13; box-shadow: inset 0 0 0 1px #2b4430, inset 0 9px 22px #0005; }
+    .live .eyebrow, .countdown-area .eyebrow { color: #a5bca0; }
+    .live-clock { display: flex; align-items: baseline; white-space: nowrap; gap: 0; margin-top: 13px; color: #b7ff5a; font-variant-numeric: tabular-nums; letter-spacing: 0; text-shadow: 0 0 5px #8dff4580, 0 0 15px #54db2780; }
+    .live-clock .hms { font-family: DSEG7, monospace; font-size: 38px; line-height: 1.35; font-weight: 400; }
+    .live-clock .ms { font-family: DSEG7, monospace; font-size: 24px; line-height: 1.35; font-weight: 400; color: #a9f64c; }
+    .source { display: flex; align-items: center; gap: 6px; margin-top: 12px; color: #a3b49e; font-size: 12px; }
+    .source .dot { width: 6px; height: 6px; border-radius: 50%; background: #43a788; }
+    .divider { border: 0; border-top: 1px solid #dbe2de; margin: 33px 0 27px; }
+    .section-title { display: flex; justify-content: space-between; align-items: center; }
+    .section-title h2 { margin: 0; font-size: 15px; font-weight: 680; }
+    .plain-link { border: 0; background: transparent; color: #16745d; font-size: 13px; font-weight: 650; padding: 5px 0; }
+    .target-panel { margin-top: 13px; padding: 4px 15px 10px; background: #142319; border: 1px solid #2b4530; border-radius: 6px; }
+    .target-time { display: flex; align-items: center; gap: 10px; padding: 14px 0 17px; border: 0; background: transparent; color: #b7ff5a; width: 100%; text-align: left; }
+    .target-time strong { font-family: DSEG7, monospace; font-size: 34px; font-weight: 400; line-height: 1.25; font-variant-numeric: tabular-nums; text-shadow: 0 0 10px #54db2770; }
+    .target-time span { color: #bdd1b5; font-size: 13px; }
+    .target-time i { margin-left: auto; align-self: center; width: 19px; height: 19px; color: #a9c19f; }
+    .countdown-area { padding: 15px 0 7px; border-top: 1px solid #36513a; }
+    .countdown { margin-top: 11px; display: block; font-family: DSEG7, monospace; font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 400; line-height: 1.35; color: #b7ff5a; text-shadow: 0 0 5px #8dff4580, 0 0 15px #54db2770; }
+    .countdown small { font-size: 19px; color: #a9f64c; }
+    .primary { width: 100%; min-height: 54px; border: 0; border-radius: 7px; background: #175e49; color: #fff; display: flex; justify-content: center; align-items: center; gap: 9px; font-size: 16px; font-weight: 680; box-shadow: 0 4px 11px #175e491c; }
+    .primary:hover { background: #114b3a; }.primary:active { transform: translateY(1px); }
+    .secondary { width: 100%; min-height: 50px; border: 1px solid #b7c8be; border-radius: 7px; color: #224336; background: transparent; font-size: 15px; font-weight: 650; }
+    .primary-area { margin-top: 25px; }
+    .footnote { margin: 11px 0 0; text-align: center; font-size: 12px; color: #8a9890; }
+    .bottom-nav { height: 67px; flex: 0 0 67px; border-top: 1px solid #e2e8e3; background: #f9fbf9; display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px 13px 5px; }
+    .nav-item { border: 0; background: none; color: #8b9b92; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; font-size: 11px; font-weight: 610; }
+    .nav-item.active { color: #17644d; }
+    .nav-item i { width: 20px; height: 20px; }
+    .home-indicator { height: 17px; flex: 0 0 17px; display: flex; justify-content: center; align-items: center; background: #f9fbf9; }
+    .home-indicator::after { content: ""; width: 108px; height: 4px; border-radius: 5px; background: #26312b; }
+    .view-intro { margin: 8px 0 23px; color: #75847c; font-size: 13px; line-height: 1.5; }
+    .position-area { min-height: 300px; height: min(44vh, 420px); display: grid; place-items: center; }
+    .test-action { min-width: 152px; height: 48px; padding: 0 22px; border: 1px solid #c95342; border-radius: 6px; background: #cf5645; color: #fff; font-size: 14px; font-weight: 660; }
+    .test-action:active { background: #a93d30; }
+    .test-action:disabled, .small-action:disabled { opacity: .45; cursor: default; }
+    .overlay-widget { position: absolute; top: 17px; right: 14px; z-index: 10; min-width: 185px; padding: 10px 12px 9px; border-radius: 5px; line-height: 1; user-select: none; cursor: grab; background: rgba(9, 22, 12, var(--surface-alpha, .65)); box-shadow: 0 5px 14px #0003; touch-action: none; }
+    .overlay-widget:active { cursor: grabbing; }.overlay-widget.is-locked { cursor: default; }
+    .overlay-widget .widget-label { display: block; margin-bottom: 7px; color: #b2d7a9; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; font-size: 9px; font-weight: 650; }
+    .overlay-widget .widget-time { display: block; color: #b7ff5a; font-family: DSEG7, monospace; font-size: 18px; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: 0 0 5px #8dff45, 0 0 13px #54db2780; }
+    .overlay-widget.size-small .widget-time { font-size: 15px; }.overlay-widget.size-large .widget-time { font-size: 22px; }
+    .overlay-widget.size-large { min-width: 210px; }.overlay-widget.size-small { min-width: 155px; }
+    .overlay-widget.no-bg { background: transparent; box-shadow: none; }
+    .overlay-widget.no-bg .widget-label { color: #345537; text-shadow: 0 1px 2px #fff; }
+    .overlay-widget.no-bg .widget-time { text-shadow: 0 1px 2px #0b1b0d, 0 0 5px #306b22; }
+    .overlay-controls { margin-top: 19px; display: flex; gap: 8px; }
+    .stop-area { margin-top: 16px; }
+    .small-action { flex: 1; min-width: 0; height: 44px; border: 1px solid #cbd9d0; border-radius: 6px; background: #fff; color: #3f594b; display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 12px; font-weight: 650; }
+    .small-action.active { border-color: #9ccdb7; color: #17644d; background: #edf8f1; }.small-action i { width: 15px; height: 15px; }
+    .status-line { margin: 14px 0 17px; display: flex; align-items: center; gap: 7px; color: #6f8075; font-size: 12px; }
+    .status-line .dot { width: 7px; height: 7px; border-radius: 50%; background: #d0a45c; }.status-line.on .dot { background: #38a47a; }
+    .settings-group { margin-top: 23px; }
+    .settings-group h2 { color: #7b8980; font-size: 12px; font-weight: 670; margin: 0 0 11px; }
+    .setting-row { min-height: 57px; display: flex; align-items: center; justify-content: space-between; gap: 15px; border-top: 1px solid #e0e7e1; }
+    .setting-row:first-of-type { border-top: 0; }
+    .setting-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .setting-copy strong { font-size: 14px; font-weight: 625; }.setting-copy span { font-size: 11px; color: #849188; }
+    .setting-row > span { font-size: 13px; color: #66796c; white-space: nowrap; }
+    .switch { width: 41px; height: 24px; padding: 2px; border: 0; border-radius: 20px; background: #b9c5bc; flex-shrink: 0; transition: background .15s; }
+    .switch::after { content: ""; display: block; width: 20px; height: 20px; border-radius: 50%; background: white; box-shadow: 0 1px 3px #0002; transition: transform .15s; }
+    .switch.on { background: #237f62; }.switch.on::after { transform: translateX(17px); }
+    .preview-band { background: #dde9e2; margin: 21px -23px 0; height: 153px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+    .preview-band::before, .preview-band::after { content: ""; position: absolute; height: 1px; width: 100%; left: 0; background: #d0dcd3; }.preview-band::before { top: 38px; }.preview-band::after { bottom: 37px; }
+    .widget-preview { min-width: 190px; padding: 11px 13px; border-radius: 5px; background: rgba(9, 22, 12, var(--surface-alpha, .65)); box-shadow: 0 4px 12px #132c2426; z-index: 1; line-height: 1; }
+    .widget-preview.no-bg { background: transparent; box-shadow: none; }
+    .widget-preview small { display: block; margin-bottom: 7px; color: #b2d7a9; font-size: 9px; font-weight: 600; }.widget-preview span { color: #b7ff5a; font-family: DSEG7, monospace; font-size: 19px; font-weight: 400; white-space: nowrap; font-variant-numeric: tabular-nums; text-shadow: 0 0 5px #8dff45, 0 0 13px #54db2780; }
+    .overlay-widget .widget-time, .widget-preview span { -webkit-text-stroke: .5px currentColor; }
+    .widget-preview.no-bg small { color: #345537; }.widget-preview.no-bg span { text-shadow: 0 1px 2px #0b1b0d, 0 0 5px #306b22; }
+    .widget-preview.size-small span { font-size: 16px; }.widget-preview.size-large span { font-size: 23px; }
+    .range-row { display: flex; align-items: center; gap: 13px; min-height: 43px; }.range-row input { flex: 1; accent-color: #237f62; }.range-row output { min-width: 38px; text-align: right; color: #586e60; font-size: 13px; }
+    .setting-button { width: 100%; border: 0; border-top: 1px solid #e0e7e1; background: transparent; min-height: 57px; display: flex; align-items: center; text-align: left; gap: 12px; color: #23352a; padding: 0; font-size: 14px; }
+    .setting-button:first-of-type { border-top: 0; }.setting-button .row-icon { color: #527765; display: flex; }.setting-button .chev { margin-left: auto; width: 17px; height: 17px; color: #819086; }
+    .settings-note { color: #89958d; font-size: 11px; line-height: 1.5; margin-top: 20px; }
+    .modal-backdrop { position: absolute; inset: 0; z-index: 20; background: #17251d70; display: none; align-items: end; }.modal-backdrop.open { display: flex; }
+    .sheet { width: 100%; max-height: 83%; overflow: auto; background: #fff; border-radius: 15px 15px 0 0; padding: 10px 23px 28px; box-shadow: 0 -5px 24px #0002; }
+    .sheet-handle { width: 36px; height: 4px; border-radius: 3px; margin: 0 auto 21px; background: #d0d9d2; }
+    .sheet-title { display: flex; justify-content: space-between; align-items: center; }.sheet-title h2 { margin: 0; font-size: 20px; }.sheet-title button { border: 0; background: transparent; color: #617269; width: 30px; height: 30px; display: grid; place-items: center; }
+    .sheet p { color: #738178; font-size: 13px; line-height: 1.5; margin: 11px 0 20px; }
+    .quick-targets { display: flex; gap: 8px; margin-bottom: 20px; }.quick-targets button { border: 1px solid #cbd9d0; border-radius: 6px; background: #fff; color: #315540; min-height: 35px; padding: 0 11px; font-size: 12px; }.quick-targets button:hover { border-color: #37896a; }
+    .field { display: flex; flex-direction: column; gap: 7px; margin: 13px 0; }.field label { font-size: 12px; font-weight: 650; color: #5e7264; }.field input { border: 1px solid #cbd9d0; background: #f9fbf9; border-radius: 6px; padding: 13px 12px; min-height: 48px; color: #263e2e; font-size: 16px; }
+    .sheet .primary { margin-top: 22px; }
+    .permission-icon { width: 46px; height: 46px; border-radius: 10px; display: flex; justify-content: center; align-items: center; background: #e2f2e8; color: #247556; margin: 8px 0 16px; }.permission-icon i { width: 24px; height: 24px; }
+    .permission-step { display: flex; gap: 10px; align-items: center; font-size: 13px; margin: 14px 0; }.permission-step b { display: grid; place-items: center; border-radius: 50%; width: 22px; height: 22px; flex: 0 0 22px; background: #e2f2e8; color: #227854; font-size: 12px; }
+    .toast { position: absolute; z-index: 30; left: 50%; bottom: 95px; transform: translateX(-50%) translateY(12px); padding: 10px 15px; border-radius: 6px; background: #1e3027; color: #fff; box-shadow: 0 5px 14px #0003; white-space: nowrap; font-size: 12px; opacity: 0; pointer-events: none; transition: .2s; }.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    @media (max-width: 600px) { .workspace { padding: 0; display: block; }.showcase-bar { display: none; }.phone { width: 100%; height: 100dvh; min-height: 0; max-height: none; border: 0; border-radius: 0; box-shadow: none; }.content { padding-left: max(23px, env(safe-area-inset-left)); padding-right: max(23px, env(safe-area-inset-right)); }.home-indicator { padding-bottom: env(safe-area-inset-bottom); height: calc(17px + env(safe-area-inset-bottom)); flex-basis: calc(17px + env(safe-area-inset-bottom)); } }
+    @media (max-height: 740px) { .live { margin-top: 18px; }.divider { margin: 24px 0 20px; }.primary-area { margin-top: 16px; } }
+    .instrument { color: #f0f3ef; background: #101612; }
+    .instrument .showcase-title strong { color: #f0f3ef; }
+    .instrument .showcase-title span { color: #8d9b8f; }
+    .instrument .showcase-nav { background: #202a22; }
+    .instrument .showcase-nav button { color: #9baa9b; }
+    .instrument .showcase-nav button.active { color: #ffd255; background: #101812; box-shadow: inset 0 0 0 1px #6b592c; }
+    .instrument .phone { color: #f0f3ef; background: #0b100e url("clock-grid.png") repeat; background-size: 132px 132px; border-color: #303c32; box-shadow: 0 22px 60px #0008; }
+    .instrument .status { color: #d8dfd9; }
+    .instrument .head h1 { color: #f5f8f4; font-size: 29px; }
+    .instrument .head p { color: #9caa9f; }
+    .instrument .icon-button { color: #d7dcd5; }
+    .instrument .icon-button:hover, .instrument .icon-button:focus-visible { background: #283329; }
+    .instrument .eyebrow { color: #d5dfd3; }
+    .instrument .live { margin: 24px -23px 0; padding: 18px 23px 20px; border-top: 1px solid #515c51; border-bottom: 1px solid #515c51; border-radius: 0; background: #090d0a66; box-shadow: none; }
+    .instrument .live .eyebrow, .instrument .countdown-area .eyebrow { display: flex; align-items: center; gap: 10px; color: #edf3eb; font-size: 13px; font-weight: 680; }
+    .instrument .live .eyebrow::before, .instrument .countdown-area .eyebrow::before, .instrument .section-title h2::before, .instrument .settings-group h2::before { content: ""; display: inline-block; width: 4px; height: 16px; flex: 0 0 4px; border-radius: 1px; background: #f2c441; }
+    .instrument .live-clock { margin-top: 20px; color: #91ff67; text-shadow: 0 0 6px #40e1357a, 0 0 15px #26bc2870; }
+    .instrument .live-clock .ms { color: #91ff67; }
+    .instrument .source { color: #93a193; margin-top: 9px; }
+    .instrument .source .dot { background: #f2c441; }
+    .instrument .divider { display: none; }
+    .instrument .section-title { margin-top: 25px; }
+    .instrument .section-title h2 { display: flex; align-items: center; gap: 10px; color: #eef2eb; font-size: 14px; }
+    .instrument .plain-link { color: #f2cc60; }
+    .instrument .target-panel { margin: 8px -23px 0; padding: 0 23px 17px; border: 0; border-bottom: 1px solid #515c51; border-radius: 0; background: #090d0a4d; }
+    .instrument .target-time { padding: 10px 0 20px; color: #f0f3ef; }
+    .instrument .target-time strong { color: #f3f6f1; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; font-size: 39px; font-weight: 740; line-height: 1.2; text-shadow: none; }
+    .instrument .target-time span { color: #cad5c8; }
+    .instrument .target-time i { color: #f2c441; }
+    .instrument .countdown-area { border-top-color: #4b594c; padding: 16px 0 3px; }
+    .instrument .countdown { margin-top: 18px; color: #91ff67; text-shadow: 0 0 6px #40e1357a, 0 0 15px #26bc2870; }
+    .instrument .countdown small { color: #91ff67; }
+    .instrument .primary-area { margin-top: 28px; }
+    .instrument .primary { border: 1px solid #8df372; border-radius: 5px; color: #f8fcf4; background: #0c2b15aa; box-shadow: inset 0 0 0 1px #2b5b2a, 0 0 14px #4cdb2926; }
+    .instrument .primary:hover, .instrument .primary:focus-visible { background: #174922; }
+    .instrument .secondary { border-color: #6b7e69; color: #eff5eb; background: #152018dd; }
+    .instrument .footnote { color: #93a193; }
+    .instrument .bottom-nav { background: #0a0e0c; border-top: 1px solid #515c51; }
+    .instrument .nav-item { position: relative; color: #98a39a; }
+    .instrument .nav-item.active { color: #ffd255; }
+    .instrument .nav-item.active::after { content: ""; position: absolute; bottom: 0; width: 29px; height: 3px; background: #ffd255; border-radius: 2px; }
+    .instrument .home-indicator { background: #0a0e0c; }
+    .instrument .home-indicator::after { background: #d5ddd3; }
+    .instrument .status-line { color: #b3c1b3; }
+    .instrument .status-line .dot { background: #f2c441; }
+    .instrument .status-line.on .dot { background: #91ff67; }
+    .instrument .test-action { background: #af4939; border-color: #d66c55; }
+    .instrument .small-action { border-color: #526353; color: #edf3e9; background: #132017; }
+    .instrument .small-action.active { border-color: #d6b94e; color: #ffe086; background: #28251a; }
+    .instrument .preview-band { background: #526156; border-top: 1px solid #839185; border-bottom: 1px solid #839185; }
+    .instrument .preview-band::before, .instrument .preview-band::after { background: #a9b7a64d; }
+    .instrument .settings-group h2 { display: flex; align-items: center; gap: 10px; color: #f2cc60; font-size: 12px; }
+    .instrument .setting-row, .instrument .setting-button { border-top-color: #435045; }
+    .instrument .setting-copy strong, .instrument .setting-button { color: #eef2eb; }
+    .instrument .setting-copy span, .instrument .setting-row > span { color: #a3b1a3; }
+    .instrument .setting-button .row-icon { color: #f2c441; }
+    .instrument .setting-button .chev { color: #a8b5a6; }
+    .instrument #permissionText { color: #c3d0be; }
+    .instrument .switch { background: #4b5b4c; }
+    .instrument .switch.on { background: #b79735; }
+    .instrument button:focus-visible, .instrument input:focus-visible { outline: 2px solid #f2c441; outline-offset: 3px; }
+    .instrument .range-row input { accent-color: #f2c441; }
+    .instrument .range-row output { color: #d4e0cd; }
+    .instrument .settings-note { color: #91a092; }
+    .instrument .modal-backdrop { background: #000b; }
+    .instrument .sheet { color: #eef3ec; background: #161f18; border-top: 1px solid #778b6d; }
+    .instrument .sheet-handle { background: #687b68; }
+    .instrument .sheet-title button { color: #d1ddcf; }
+    .instrument .sheet p { color: #b1beae; }
+    .instrument .quick-targets button { color: #f2d477; border-color: #6e7656; background: #202b20; }
+    .instrument .quick-targets button:hover { border-color: #f2c441; }
+    .instrument .field label { color: #d4ddce; }
+    .instrument .field input { color: #f5f8f3; border-color: #59695a; background: #101712; color-scheme: dark; }
+    .instrument .permission-icon { color: #a9fb78; background: #1d3820; }
+    .instrument .permission-step b { color: #1f220d; background: #f2c441; }
+    .instrument .toast { color: #f5f8f3; background: #203221; border: 1px solid #638960; }
+    @media (max-height: 740px) { .instrument .live { margin-top: 14px; padding-top: 14px; padding-bottom: 14px; }.instrument .section-title { margin-top: 18px; }.instrument .primary-area { margin-top: 18px; } }
+    .native-app { margin: 0; height: 100%; }
+    .native-app .workspace { height: 100%; min-height: 0; padding: 0; display: block; }
+    .native-app .showcase-bar, .native-app .status, .native-app .home-indicator { display: none; }
+    .native-app .phone { width: 100%; height: 100%; max-height: none; min-height: 0; border: 0; border-radius: 0; box-shadow: none; }
+    .native-app .content { padding-top: 12px; }
+    .native-app .live { margin-top: 14px; padding-top: 12px; padding-bottom: 12px; }
+    .native-app .live-clock { margin-top: 10px; }
+    .native-app .section-title { margin-top: 14px; }
+    .native-app .target-time { padding-top: 8px; padding-bottom: 9px; }
+    .native-app .target-panel { padding-bottom: 10px; }
+    .native-app .countdown-area { padding-top: 10px; }
+    .native-app .countdown { margin-top: 8px; }
+    .native-app .primary-area { margin-top: 13px; }
+    .native-app .footnote { display: none; }
+    .native-app .range-row input[type="range"] { -webkit-appearance: none; appearance: none; height: 26px; margin: 0; background: transparent; }
+    .native-app .range-row input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, #f2c441 0 var(--progress), #566557 var(--progress) 100%); }
+    .native-app .range-row input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -7px; border: 2px solid #182118; border-radius: 50%; background: #f2c441; box-shadow: 0 0 0 1px #f2c441; }
+    .native-app .status-line { margin: 8px 0 10px; }
+    .native-app .position-area { min-height: 220px; height: min(46vh, 440px); }
+    .native-app .overlay-controls, .native-app .stop-area { margin-top: 8px; }
+  </style>
+</head>
+<body class="instrument">
+  <div class="workspace">
+    <div class="showcase-bar"><div class="showcase-title"><strong>准点</strong><span>安卓悬浮时钟 · UI 原型</span></div><div class="showcase-nav" id="showcaseNav"><button data-view="clock" class="active">时钟</button><button data-view="overlay">悬浮位置</button><button data-view="appearance">外观</button><button data-view="settings">设置</button></div></div>
+    <main class="phone" id="phone">
+      <div class="status"><span id="statusTime">09:41</span><span class="status-right"><span class="signal"><b></b><b></b><b></b><b></b></span><span style="font-size:11px">●</span><span class="battery"></span></span></div>
+      <section class="view active" id="view-clock"><div class="content">
+        <div class="head"><div><h1>准点</h1><p id="todayLabel"></p></div><button class="icon-button" data-view="settings" title="设置" aria-label="设置"><i data-lucide="settings-2"></i></button></div>
+        <div class="live"><span class="eyebrow">当前时间</span><div class="live-clock"><span class="hms" id="mainHms">00:00:00</span><span class="ms" id="mainMs">.000</span></div><div class="source"><span class="dot"></span><span>手机系统时间</span></div></div>
+        <hr class="divider">
+        <div class="section-title"><h2>目标时刻</h2><button class="plain-link" id="nextHour">下一个整点</button></div>
+        <div class="target-panel"><button class="target-time" id="targetOpen" aria-label="设置目标时间"><strong id="targetLabel">00:00</strong><span id="targetDay">今天</span><i data-lucide="chevron-right"></i></button>
+        <div class="countdown-area"><span class="eyebrow">距离目标</span><span class="countdown" id="countdown">00:00:00<small>.000</small></span></div></div>
+        <div class="primary-area"><button class="primary" id="startButton"><i data-lucide="picture-in-picture-2"></i><span id="startText">开启悬浮时钟</span></button><p class="footnote">开启后可切换到购票应用</p></div>
+      </div></section>
+      <section class="view" id="view-overlay"><div class="content">
+        <div class="head"><div><h1>悬浮位置</h1><p id="positionHint">拖动时钟，调整它在屏幕上的位置</p></div><button class="icon-button" data-view="appearance" title="调整外观" aria-label="调整外观"><i data-lucide="sliders-horizontal"></i></button></div>
+        <div class="status-line" id="overlayStatus"><span class="dot"></span><span id="overlayStatusText">未开启</span></div>
+        <div class="position-area"><button class="test-action" id="ticketAction" disabled>测试点击</button></div>
+        <div class="overlay-controls"><button class="small-action" id="safeModeButton" aria-pressed="false"><i data-lucide="shield-check"></i><span>开启防误触</span></button></div>
+        <div class="stop-area"><button class="secondary" id="stopButton">开启悬浮时钟</button></div>
+      </div></section>
+      <section class="view" id="view-appearance"><div class="content">
+        <div class="head"><div><h1>外观</h1><p>悬浮时钟的显示样式</p></div></div>
+        <div class="preview-band"><div class="widget-preview" id="widgetPreview"><small>准点 · 手机时间</small><span id="previewClock">00:00:00.000</span></div></div>
+        <div class="settings-group" style="margin-top:5px"><h2>尺寸</h2><div class="range-row"><input type="range" id="sizeRange" min="0" max="2" step="1" value="1" aria-label="悬浮窗尺寸"><output id="sizeValue">标准</output></div></div>
+        <div class="settings-group" style="margin-top:13px"><h2>底色浓度</h2><div class="range-row"><input type="range" id="opacityRange" min="0" max="100" step="5" value="65" aria-label="悬浮窗底色浓度"><output id="opacityValue">65%</output></div></div>
+        <div class="settings-group" style="margin-top:13px"><div class="setting-row"><div class="setting-copy"><strong>隐藏背景</strong><span>仅保留荧光绿数字</span></div><button class="switch" id="noBgSwitch" role="switch" aria-label="隐藏背景" aria-checked="false"></button></div><div class="setting-row"><div class="setting-copy"><strong>防误触</strong><span>锁定位置，同时让触摸穿过时钟</span></div><button class="switch" id="safeModeSwitch" role="switch" aria-label="防误触" aria-checked="false"></button></div></div>
+      </div></section>
+      <section class="view" id="view-settings"><div class="content">
+        <div class="head"><div><h1>设置</h1><p>提醒与悬浮窗管理</p></div></div>
+        <div class="settings-group" style="margin-top:33px"><h2>到点提醒</h2><div class="setting-row"><div class="setting-copy"><strong>到点震动</strong><span>目标时刻触发一次</span></div><button class="switch on" id="vibrateSwitch" role="switch" aria-label="到点震动" aria-checked="true"></button></div><div class="setting-row"><div class="setting-copy"><strong>到点提示音</strong><span>目标时刻播放短提示音</span></div><button class="switch" id="soundSwitch" role="switch" aria-label="到点提示音" aria-checked="false"></button></div></div>
+        <div class="settings-group"><h2>悬浮窗</h2><button class="setting-button" id="permissionRow"><span class="row-icon"><i data-lucide="scan-eye"></i></span><span>显示在其他应用上层</span><span class="chev" id="permissionText" style="margin-left:auto;width:auto;font-size:12px">未授权</span><i class="chev" data-lucide="chevron-right"></i></button><button class="setting-button" data-view="appearance"><span class="row-icon"><i data-lucide="palette"></i></span><span>时钟外观</span><i class="chev" data-lucide="chevron-right"></i></button><button class="setting-button" data-view="overlay"><span class="row-icon"><i data-lucide="move"></i></span><span>悬浮位置</span><i class="chev" data-lucide="chevron-right"></i></button></div>
+      </div></section>
+      <nav class="bottom-nav" id="bottomNav"><button class="nav-item active" data-view="clock"><i data-lucide="clock-3"></i><span>时钟</span></button><button class="nav-item" data-view="overlay"><i data-lucide="move"></i><span>悬浮</span></button><button class="nav-item" data-view="appearance"><i data-lucide="sliders-horizontal"></i><span>外观</span></button></nav><div class="home-indicator"></div>
+      <div class="overlay-widget" id="overlayWidget" hidden><span class="widget-label">准点 · 手机时间</span><span class="widget-time" id="overlayClock">00:00:00.000</span></div>
+      <div class="modal-backdrop" id="targetModal"><div class="sheet"><div class="sheet-handle"></div><div class="sheet-title"><h2>设置目标时刻</h2><button data-close="targetModal" aria-label="关闭"><i data-lucide="x"></i></button></div><p>目标按分钟设置，到点秒数为 00；倒计时显示到毫秒。</p><div class="quick-targets"><button id="quickHour">下一个整点</button><button id="quickFive">约 5 分钟后</button></div><div class="field"><label for="targetDateInput">日期</label><input type="date" id="targetDateInput"></div><div class="field"><label for="targetTimeInput">时间</label><input type="time" id="targetTimeInput" step="60"></div><button class="primary" id="saveTarget">保存目标时间</button></div></div>
+      <div class="modal-backdrop" id="permissionModal"><div class="sheet"><div class="sheet-handle"></div><div class="sheet-title"><h2>开启悬浮窗权限</h2><button data-close="permissionModal" aria-label="关闭"><i data-lucide="x"></i></button></div><div class="permission-icon"><i data-lucide="picture-in-picture-2"></i></div><p>允许“准点”显示在其他应用上层，才能在购票页面持续看到时间。</p><div class="permission-step"><b>1</b><span>进入系统的悬浮窗权限页面</span></div><div class="permission-step"><b>2</b><span>允许显示在其他应用上层</span></div><button class="primary" id="grantPermission">前往系统授权</button></div></div>
+      <div class="toast" id="toast"></div>
+    </main>
+  </div>
+  <script src="clock-ui-lucide.min.js"></script>
+  <script>
+    const native = window.ZhundianAndroid || null;
+    if (native) document.body.classList.add('native-app');
+    if (window.lucide) lucide.createIcons();
+    const $ = (id) => document.getElementById(id);
+    const pad = (n, width = 2) => String(n).padStart(width, '0');
+    let stored = {};
+    try { stored = JSON.parse(localStorage.getItem('zhundian-ui') || '{}'); } catch (_) {}
+    const state = Object.assign({ size: 1, opacity: 65, noBg: false, safeMode: false, active: false, permission: false, vibrate: true, sound: false, target: null }, stored);
+    if (!stored.uiVersion || stored.uiVersion < 2) { state.opacity = 65; state.safeMode = !!(stored.locked || stored.through); }
+    state.uiVersion = 2;
+    delete state.theme; delete state.locked; delete state.through;
+    function nextHour() { const d = new Date(); d.setHours(d.getHours() + 1, 0, 0, 0); return d; }
+    if (!state.target || new Date(state.target).getTime() < Date.now() - 60000) state.target = nextHour().toISOString();
+    function persist() { const json = JSON.stringify(state); try { localStorage.setItem('zhundian-ui', json); } catch (_) {} if (native) native.saveConfig(json); }
+    function timeString(d) { return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`; }
+    function dateKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+    let currentView = 'clock';
+    function setView(view) { currentView = view; document.querySelectorAll('.view').forEach(el => el.classList.toggle('active', el.id === `view-${view}`)); document.querySelectorAll('[data-view]').forEach(el => el.classList.toggle('active', el.dataset.view === view)); document.querySelectorAll('.view').forEach(el => { if (el.id === `view-${view}`) el.scrollTop = 0; }); $('overlayWidget').hidden = !!native || !state.active || view !== 'overlay'; if (native) native.showOverlayOnPage(view === 'overlay'); }
+    document.querySelectorAll('[data-view]').forEach(el => el.addEventListener('click', () => setView(el.dataset.view)));
+    function openModal(id) { $(id).classList.add('open'); }
+    function closeModal(id) { $(id).classList.remove('open'); }
+    document.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => closeModal(el.dataset.close)));
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); }));
+    let toastTimer;
+    function toast(text) { $('toast').textContent = text; $('toast').classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2300); }
+    function updateTarget() { const target = new Date(state.target); $('targetLabel').textContent = `${pad(target.getHours())}:${pad(target.getMinutes())}`; const today = dateKey(new Date()); const tomorrow = dateKey(new Date(Date.now() + 86400000)); $('targetDay').textContent = dateKey(target) === today ? '今天' : dateKey(target) === tomorrow ? '明天' : `${target.getMonth() + 1}月${target.getDate()}日`; }
+    function chooseTarget(d) { state.target = d.toISOString(); persist(); updateTarget(); $('targetDateInput').value = dateKey(d); $('targetTimeInput').value = `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+    $('nextHour').addEventListener('click', () => { chooseTarget(nextHour()); toast('已设为下一个整点'); });
+    $('targetOpen').addEventListener('click', () => { const d = new Date(state.target); $('targetDateInput').value = dateKey(d); $('targetTimeInput').value = `${pad(d.getHours())}:${pad(d.getMinutes())}`; $('targetDateInput').min = dateKey(new Date()); openModal('targetModal'); });
+    $('quickHour').addEventListener('click', () => { chooseTarget(nextHour()); closeModal('targetModal'); toast('已设为下一个整点'); });
+    $('quickFive').addEventListener('click', () => { const d = new Date(Date.now() + 300000); d.setSeconds(0, 0); chooseTarget(d); closeModal('targetModal'); toast('目标时间已更新'); });
+    $('saveTarget').addEventListener('click', () => { const date = $('targetDateInput').value, time = $('targetTimeInput').value; if (!date || !time) return toast('请选择日期和时间'); const d = new Date(`${date}T${time}:00`); if (d.getTime() <= Date.now()) return toast('请选择未来的时间'); chooseTarget(d); closeModal('targetModal'); toast('目标时间已更新'); });
+    let pendingNativeStart = false;
+    function startOverlay() { if (native) { pendingNativeStart = true; native.startOverlay(JSON.stringify(state)); return; } state.active = true; persist(); applyState(); setView('overlay'); toast('悬浮时钟已开启'); }
+    function requestOverlayStart() { if (!state.permission) openModal('permissionModal'); else startOverlay(); }
+    $('startButton').addEventListener('click', () => { if (state.active) setView('overlay'); else requestOverlayStart(); });
+    $('grantPermission').addEventListener('click', () => { closeModal('permissionModal'); if (native) startOverlay(); else { state.permission = true; startOverlay(); } });
+    $('permissionRow').addEventListener('click', () => { if (state.permission) toast('悬浮窗权限已授权'); else if (native) native.requestPermission(); else openModal('permissionModal'); });
+    $('stopButton').addEventListener('click', () => { if (!state.active) return requestOverlayStart(); state.active = false; persist(); if (native) native.stopOverlay(); applyState(); toast('悬浮时钟已关闭'); });
+    let testClicks = 0;
+    $('ticketAction').addEventListener('click', () => { testClicks++; $('ticketAction').textContent = `已点击 ${testClicks} 次`; });
+    function toggle(key) { state[key] = !state[key]; persist(); applyState(); }
+    $('safeModeButton').addEventListener('click', () => toggle('safeMode'));
+    $('safeModeSwitch').addEventListener('click', () => toggle('safeMode'));
+    $('noBgSwitch').addEventListener('click', () => toggle('noBg'));
+    $('vibrateSwitch').addEventListener('click', () => toggle('vibrate'));
+    $('soundSwitch').addEventListener('click', () => toggle('sound'));
+    $('sizeRange').addEventListener('input', e => { state.size = Number(e.target.value); persist(); applyState(); });
+    $('opacityRange').addEventListener('input', e => { state.opacity = Number(e.target.value); persist(); applyState(); });
+    function applyState() {
+      const sizes = ['size-small', '', 'size-large'];
+      for (const el of [$('overlayWidget'), $('widgetPreview')]) { el.className = `${el.id === 'overlayWidget' ? 'overlay-widget' : 'widget-preview'} ${sizes[state.size]} ${state.noBg ? 'no-bg' : ''}`; el.style.setProperty('--surface-alpha', state.opacity / 100); el.style.opacity = state.safeMode ? '.79' : '1'; }
+      $('overlayWidget').hidden = !!native || !state.active || currentView !== 'overlay';
+      $('overlayWidget').classList.toggle('is-locked', state.safeMode);
+      $('overlayWidget').style.pointerEvents = state.safeMode ? 'none' : 'auto';
+      $('sizeRange').value = state.size; $('sizeRange').style.setProperty('--progress', `${state.size * 50}%`); $('sizeValue').value = ['小', '标准', '大'][state.size]; $('opacityRange').value = state.opacity; $('opacityRange').style.setProperty('--progress', `${state.opacity}%`); $('opacityValue').value = `${state.opacity}%`;
+      for (const [id,key] of [['noBgSwitch','noBg'],['safeModeSwitch','safeMode'],['vibrateSwitch','vibrate'],['soundSwitch','sound']]) { $(id).classList.toggle('on', state[key]); $(id).setAttribute('aria-checked', String(state[key])); }
+      $('safeModeButton').classList.toggle('active', state.safeMode); $('safeModeButton').setAttribute('aria-pressed', String(state.safeMode)); $('safeModeButton').querySelector('span').textContent = state.safeMode ? '防误触已开启' : '开启防误触';
+      $('safeModeButton').disabled = !state.active; $('ticketAction').disabled = !state.active;
+      $('positionHint').textContent = state.safeMode && state.active ? '关闭防误触后可拖动时钟' : '拖动时钟，调整它在屏幕上的位置';
+      $('overlayStatus').classList.toggle('on', state.active); $('overlayStatusText').textContent = state.active ? (state.safeMode ? '运行中 · 已锁定并穿透触摸' : '运行中 · 可拖动调整位置') : '未开启';
+      $('stopButton').textContent = state.active ? '关闭悬浮时钟' : '开启悬浮时钟';
+      $('startText').textContent = state.active ? '查看悬浮时钟' : '开启悬浮时钟'; $('permissionText').textContent = state.permission ? '已授权' : '未授权';
+    }
+    window.nativeOverlayStatus = (active, permission) => { const becameActive = active && !state.active; state.active = active; state.permission = permission; applyState(); if (active) closeModal('permissionModal'); if (becameActive && pendingNativeStart) { setView('overlay'); toast('悬浮时钟已开启'); pendingNativeStart = false; } };
+    window.nativeOverlayError = message => { pendingNativeStart = false; toast(message); };
+    let drag = null;
+    $('overlayWidget').addEventListener('pointerdown', e => { if (state.safeMode) return; const el = $('overlayWidget'), phone = $('phone'); const rect = el.getBoundingClientRect(), bounds = phone.getBoundingClientRect(); drag = {x:e.clientX, y:e.clientY, left:rect.left - bounds.left, top:rect.top - bounds.top}; el.setPointerCapture(e.pointerId); e.preventDefault(); });
+    $('overlayWidget').addEventListener('pointermove', e => { if (!drag) return; const el = $('overlayWidget'), phone = $('phone'); const left = Math.max(0, Math.min(phone.clientWidth - el.offsetWidth, drag.left + e.clientX - drag.x)); const top = Math.max(0, Math.min(phone.clientHeight - el.offsetHeight, drag.top + e.clientY - drag.y)); el.style.left = `${left}px`; el.style.top = `${top}px`; el.style.right = 'auto'; });
+    $('overlayWidget').addEventListener('pointerup', () => { drag = null; });
+    $('overlayWidget').addEventListener('pointercancel', () => { drag = null; });
+    let lastTargetReached = false;
+    const dateFormatter = new Intl.DateTimeFormat('zh-CN', {month:'long', day:'numeric', weekday:'long'});
+    let lastDateKey = '';
+    function tick() {
+      const now = new Date(), t = timeString(now), remaining = Math.max(0, new Date(state.target).getTime() - now.getTime());
+      $('mainHms').textContent = t.slice(0, 8); $('mainMs').textContent = t.slice(8); $('overlayClock').textContent = t; $('previewClock').textContent = t;
+      $('statusTime').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const today = dateKey(now); if (today !== lastDateKey) { $('todayLabel').textContent = dateFormatter.format(now); lastDateKey = today; }
+      const hours = Math.floor(remaining / 3600000), mins = Math.floor(remaining % 3600000 / 60000), secs = Math.floor(remaining % 60000 / 1000), ms = remaining % 1000;
+      $('countdown').innerHTML = `${pad(hours)}:${pad(mins)}:${pad(secs)}<small>.${pad(ms, 3)}</small>`;
+      if (remaining === 0 && !lastTargetReached) { lastTargetReached = true; toast('目标时间已到'); if ((!native || !state.active) && state.vibrate && navigator.vibrate) navigator.vibrate(150); if ((!native || !state.active) && state.sound) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(), gain = ctx.createGain(); osc.frequency.value = 880; gain.gain.value = .08; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + .12); } catch (_) {} } }
+      if (remaining > 0) lastTargetReached = false;
+      requestAnimationFrame(tick);
+    }
+    updateTarget(); applyState(); persist(); tick();
+    if (native) setInterval(() => native.sync(), 2000);
+  </script>
+</body>
+</html>
