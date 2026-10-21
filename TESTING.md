@@ -1,5 +1,10 @@
 # 验证记录
 
+## 1.2.1 悬浮窗校准状态
+
+- `scripts/build-local.sh` 与 `./gradlew assembleDebug --offline` 构建成功；本地 APK 的 v2/v3 签名验证通过。
+- Android 16 小米手机更新到 `1.2.1`（versionCode 6）后，桌面悬浮窗完整显示“准点 · 网络校准 · 较稳定 · 1分钟前”；状态文字保持在数字宽度内，未撑宽窗口或挤压毫秒数字。
+
 ## 1.2.0 网络校准与帧刷新
 
 - `scripts/build-local.sh` 与 `./gradlew assembleDebug` 均构建成功；本地调试 APK 的 v2/v3 签名验证通过。

@@ -61,10 +61,14 @@ public final class SevenSegmentView extends View {
         }
     }
 
+    public int getClockWidth() {
+        float width = 9 * digitWidth + 3 * separatorWidth + 11 * gap + dp(2 * displayScale);
+        return (int) Math.ceil(width);
+    }
+
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        float width = 9 * digitWidth + 3 * separatorWidth + 11 * gap + dp(2 * displayScale);
-        setMeasuredDimension(resolveSize((int) Math.ceil(width), widthMeasureSpec),
+        setMeasuredDimension(resolveSize(getClockWidth(), widthMeasureSpec),
                 resolveSize((int) Math.ceil(digitHeight + dp(8 * displayScale)), heightMeasureSpec));
     }
 

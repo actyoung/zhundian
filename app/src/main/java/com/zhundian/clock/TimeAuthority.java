@@ -84,12 +84,6 @@ final class TimeAuthority {
                 + (syncing ? " · 更新中" : warning);
     }
 
-    static String shortStatus() {
-        Anchor current = anchor;
-        if (current == null || ageMillis(current) >= MAX_ANCHOR_AGE_MS) return "手机时间";
-        return current.network ? "网络校准" : "系统网络时间";
-    }
-
     static String details() {
         Anchor current = anchor;
         if (current == null || ageMillis(current) >= MAX_ANCHOR_AGE_MS) return status();

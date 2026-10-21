@@ -81,7 +81,7 @@ public final class OverlayService extends Service {
         digits.setTime(clockFormat.format(clockDate));
         if (now / 1000 != lastStatusSecond) {
             lastStatusSecond = now / 1000;
-            sourceLabel.setText("准点 · " + TimeAuthority.shortStatus());
+            sourceLabel.setText("准点 · " + TimeAuthority.status());
             TimeAuthority.syncIfDue(getApplicationContext(), false);
             long target = getSharedPreferences("clock", MODE_PRIVATE).getLong("targetMillis", 0);
             digits.setHighRefresh(target > now && target - now <= 120_000);
@@ -180,13 +180,15 @@ public final class OverlayService extends Service {
         int horizontal = dp(11);
         overlay.setPadding(horizontal, dp(9), horizontal, dp(8));
 
+        digits = new SevenSegmentView(this);
         sourceLabel = new TextView(this);
-        sourceLabel.setText("准点 · " + TimeAuthority.shortStatus());
+        sourceLabel.setText("准点 · " + TimeAuthority.status());
         sourceLabel.setTextColor(Color.rgb(178, 215, 169));
         sourceLabel.setTextSize(9);
         sourceLabel.setTypeface(null, 1);
-        overlay.addView(sourceLabel);
-        digits = new SevenSegmentView(this);
+        sourceLabel.setLines(2);
+        sourceLabel.setIncludeFontPadding(false);
+        overlay.addView(sourceLabel, new LinearLayout.LayoutParams(digits.getClockWidth(), -2));
         LinearLayout.LayoutParams digitLayout = new LinearLayout.LayoutParams(-2, -2);
         digitLayout.topMargin = dp(5);
         overlay.addView(digits, digitLayout);
@@ -219,6 +221,8 @@ public final class OverlayService extends Service {
         boolean noBg = prefs.getBoolean("noBg", false);
         safeMode = prefs.getBoolean("safeMode", false);
         digits.setSize(size);
+        sourceLabel.getLayoutParams().width = digits.getClockWidth();
+        sourceLabel.requestLayout();
 
         GradientDrawable background = new GradientDrawable();
         background.setColor(noBg ? Color.TRANSPARENT : Color.argb(opacity * 255 / 100, 9, 22, 12));
