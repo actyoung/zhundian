@@ -112,6 +112,13 @@
     .setting-button { width: 100%; border: 0; border-top: 1px solid #e0e7e1; background: transparent; min-height: 57px; display: flex; align-items: center; text-align: left; gap: 12px; color: #23352a; padding: 0; font-size: 14px; }
     .setting-button:first-of-type { border-top: 0; }.setting-button .row-icon { color: #527765; display: flex; }.setting-button .chev { margin-left: auto; width: 17px; height: 17px; color: #819086; }
     .settings-note { color: #89958d; font-size: 11px; line-height: 1.5; margin-top: 20px; }
+    [hidden] { display: none !important; }
+    .reminder-notice { width: 100%; min-height: 46px; margin-top: 13px; padding: 9px 12px; border: 1px solid #a56d37; border-radius: 5px; background: #32271a; color: #f6d68e; display: flex; align-items: center; gap: 9px; text-align: left; font-size: 12px; }
+    .reminder-notice i { width: 17px; height: 17px; flex-shrink: 0; }
+    .reminder-notice i:last-child { margin-left: auto; }
+    .reminder-test { width: 100%; height: 43px; margin-top: 11px; border: 1px solid #65775e; border-radius: 5px; background: #17231a; color: #e6ede2; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 650; }
+    .reminder-test i { width: 16px; height: 16px; }
+    .reminder-test:disabled { opacity: .45; }
     .modal-backdrop { position: absolute; inset: 0; z-index: 20; background: #17251d70; display: none; align-items: end; }.modal-backdrop.open { display: flex; }
     .sheet { width: 100%; max-height: 83%; overflow: auto; background: #fff; border-radius: 15px 15px 0 0; padding: 10px 23px 28px; box-shadow: 0 -5px 24px #0002; }
     .sheet-handle { width: 36px; height: 4px; border-radius: 3px; margin: 0 auto 21px; background: #d0d9d2; }
@@ -236,6 +243,7 @@
         <div class="section-title"><h2>目标时刻</h2><button class="plain-link" id="nextHour">下一个整点</button></div>
         <div class="target-panel"><button class="target-time" id="targetOpen" aria-label="设置目标时间"><strong id="targetLabel">00:00</strong><span id="targetDay">今天</span><i data-lucide="chevron-right"></i></button>
         <div class="countdown-area"><span class="eyebrow">距离目标</span><span class="countdown" id="countdown">00:00:00<small>.000</small></span></div></div>
+        <button class="reminder-notice" id="reminderNotice" hidden><i data-lucide="alarm-clock"></i><span>允许精确提醒，到点才能在后台震动或响铃</span><i data-lucide="chevron-right"></i></button>
         <div class="primary-area"><button class="primary" id="startButton"><i data-lucide="picture-in-picture-2"></i><span id="startText">开启悬浮时钟</span></button><p class="footnote">开启后可切换到购票应用</p></div>
       </div></section>
       <section class="view" id="view-overlay"><div class="content">
@@ -254,7 +262,7 @@
       </div></section>
       <section class="view" id="view-settings"><div class="content">
         <div class="head"><div><h1>设置</h1><p>提醒与悬浮窗管理</p></div></div>
-        <div class="settings-group" style="margin-top:33px"><h2>到点提醒</h2><div class="setting-row"><div class="setting-copy"><strong>到点震动</strong><span>目标时刻触发一次</span></div><button class="switch on" id="vibrateSwitch" role="switch" aria-label="到点震动" aria-checked="true"></button></div><div class="setting-row"><div class="setting-copy"><strong>到点提示音</strong><span>目标时刻播放短提示音</span></div><button class="switch" id="soundSwitch" role="switch" aria-label="到点提示音" aria-checked="false"></button></div></div>
+        <div class="settings-group" style="margin-top:33px"><h2>到点提醒</h2><div class="setting-row"><div class="setting-copy"><strong>到点震动</strong><span>目标时刻触发一次</span></div><button class="switch on" id="vibrateSwitch" role="switch" aria-label="到点震动" aria-checked="true"></button></div><div class="setting-row"><div class="setting-copy"><strong>到点提示音</strong><span>使用系统闹钟音量</span></div><button class="switch" id="soundSwitch" role="switch" aria-label="到点提示音" aria-checked="false"></button></div><button class="setting-button" id="exactAlarmRow"><span class="row-icon"><i data-lucide="alarm-clock"></i></span><span>精确提醒权限</span><span class="chev" id="exactAlarmText" style="margin-left:auto;width:auto;font-size:12px">检查中</span><i class="chev" data-lucide="chevron-right"></i></button><button class="reminder-test" id="reminderTest"><i data-lucide="bell-ring"></i><span>测试提醒</span></button></div>
         <div class="settings-group"><h2>悬浮窗</h2><button class="setting-button" id="permissionRow"><span class="row-icon"><i data-lucide="scan-eye"></i></span><span>显示在其他应用上层</span><span class="chev" id="permissionText" style="margin-left:auto;width:auto;font-size:12px">未授权</span><i class="chev" data-lucide="chevron-right"></i></button><button class="setting-button" data-view="appearance"><span class="row-icon"><i data-lucide="palette"></i></span><span>时钟外观</span><i class="chev" data-lucide="chevron-right"></i></button><button class="setting-button" data-view="overlay"><span class="row-icon"><i data-lucide="move"></i></span><span>悬浮位置</span><i class="chev" data-lucide="chevron-right"></i></button></div>
       </div></section>
       <nav class="bottom-nav" id="bottomNav"><button class="nav-item active" data-view="clock"><i data-lucide="clock-3"></i><span>时钟</span></button><button class="nav-item" data-view="overlay"><i data-lucide="move"></i><span>悬浮</span></button><button class="nav-item" data-view="appearance"><i data-lucide="sliders-horizontal"></i><span>外观</span></button></nav><div class="home-indicator"></div>
@@ -274,6 +282,8 @@
     let stored = {};
     try { stored = JSON.parse(localStorage.getItem('zhundian-ui') || '{}'); } catch (_) {}
     const state = Object.assign({ size: 1, opacity: 65, noBg: false, safeMode: false, active: false, permission: false, vibrate: true, sound: false, target: null }, stored);
+    let exactAlarmReady = !native;
+    let reminderArmed = false;
     if (!stored.uiVersion || stored.uiVersion < 2) { state.opacity = 65; state.safeMode = !!(stored.locked || stored.through); }
     state.uiVersion = 2;
     delete state.theme; delete state.locked; delete state.through;
@@ -304,6 +314,9 @@
     $('startButton').addEventListener('click', () => { if (state.active) setView('overlay'); else requestOverlayStart(); });
     $('grantPermission').addEventListener('click', () => { closeModal('permissionModal'); if (native) startOverlay(); else { state.permission = true; startOverlay(); } });
     $('permissionRow').addEventListener('click', () => { if (state.permission) toast('悬浮窗权限已授权'); else if (native) native.requestPermission(); else openModal('permissionModal'); });
+    function requestExactAlarm() { if (native && !exactAlarmReady) native.requestExactAlarmPermission(); else toast('精确提醒权限已授权'); }
+    $('reminderNotice').addEventListener('click', requestExactAlarm);
+    $('exactAlarmRow').addEventListener('click', requestExactAlarm);
     $('stopButton').addEventListener('click', () => { if (!state.active) return requestOverlayStart(); state.active = false; persist(); if (native) native.stopOverlay(); applyState(); toast('悬浮时钟已关闭'); });
     let testClicks = 0;
     $('ticketAction').addEventListener('click', () => { testClicks++; $('ticketAction').textContent = `已点击 ${testClicks} 次`; });
@@ -313,6 +326,11 @@
     $('noBgSwitch').addEventListener('click', () => toggle('noBg'));
     $('vibrateSwitch').addEventListener('click', () => toggle('vibrate'));
     $('soundSwitch').addEventListener('click', () => toggle('sound'));
+    function playBrowserReminder() {
+      if (state.vibrate && navigator.vibrate) navigator.vibrate([180, 100, 180]);
+      if (state.sound) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(), gain = ctx.createGain(); osc.frequency.value = 880; gain.gain.value = .08; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + .35); } catch (_) {} }
+    }
+    $('reminderTest').addEventListener('click', () => { if (native) native.testReminder(JSON.stringify(state)); else playBrowserReminder(); toast('已触发测试提醒'); });
     $('sizeRange').addEventListener('input', e => { state.size = Number(e.target.value); persist(); applyState(); });
     $('opacityRange').addEventListener('input', e => { state.opacity = Number(e.target.value); persist(); applyState(); });
     function applyState() {
@@ -329,9 +347,15 @@
       $('overlayStatus').classList.toggle('on', state.active); $('overlayStatusText').textContent = state.active ? (state.safeMode ? '运行中 · 已锁定并穿透触摸' : '运行中 · 可拖动调整位置') : '未开启';
       $('stopButton').textContent = state.active ? '关闭悬浮时钟' : '开启悬浮时钟';
       $('startText').textContent = state.active ? '查看悬浮时钟' : '开启悬浮时钟'; $('permissionText').textContent = state.permission ? '已授权' : '未授权';
+      const reminderEnabled = state.vibrate || state.sound;
+      $('reminderTest').disabled = !reminderEnabled;
+      $('reminderNotice').hidden = !native || !reminderEnabled || exactAlarmReady || new Date(state.target).getTime() <= Date.now();
+      $('exactAlarmText').textContent = !native ? '原型预览' : exactAlarmReady ? (reminderArmed ? '已就绪' : '已授权') : '未授权';
     }
     window.nativeOverlayStatus = (active, permission) => { const becameActive = active && !state.active; state.active = active; state.permission = permission; applyState(); if (active) closeModal('permissionModal'); if (becameActive && pendingNativeStart) { setView('overlay'); toast('悬浮时钟已开启'); pendingNativeStart = false; } };
     window.nativeOverlayError = message => { pendingNativeStart = false; toast(message); };
+    window.nativeReminderStatus = (ready, armed) => { exactAlarmReady = ready; reminderArmed = armed; applyState(); };
+    window.nativeReminderError = message => toast(message);
     let drag = null;
     $('overlayWidget').addEventListener('pointerdown', e => { if (state.safeMode) return; const el = $('overlayWidget'), phone = $('phone'); const rect = el.getBoundingClientRect(), bounds = phone.getBoundingClientRect(); drag = {x:e.clientX, y:e.clientY, left:rect.left - bounds.left, top:rect.top - bounds.top}; el.setPointerCapture(e.pointerId); e.preventDefault(); });
     $('overlayWidget').addEventListener('pointermove', e => { if (!drag) return; const el = $('overlayWidget'), phone = $('phone'); const left = Math.max(0, Math.min(phone.clientWidth - el.offsetWidth, drag.left + e.clientX - drag.x)); const top = Math.max(0, Math.min(phone.clientHeight - el.offsetHeight, drag.top + e.clientY - drag.y)); el.style.left = `${left}px`; el.style.top = `${top}px`; el.style.right = 'auto'; });
@@ -347,7 +371,7 @@
       const today = dateKey(now); if (today !== lastDateKey) { $('todayLabel').textContent = dateFormatter.format(now); lastDateKey = today; }
       const hours = Math.floor(remaining / 3600000), mins = Math.floor(remaining % 3600000 / 60000), secs = Math.floor(remaining % 60000 / 1000), ms = remaining % 1000;
       $('countdown').innerHTML = `${pad(hours)}:${pad(mins)}:${pad(secs)}<small>.${pad(ms, 3)}</small>`;
-      if (remaining === 0 && !lastTargetReached) { lastTargetReached = true; toast('目标时间已到'); if ((!native || !state.active) && state.vibrate && navigator.vibrate) navigator.vibrate(150); if ((!native || !state.active) && state.sound) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(), gain = ctx.createGain(); osc.frequency.value = 880; gain.gain.value = .08; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + .12); } catch (_) {} } }
+      if (remaining === 0 && !lastTargetReached) { lastTargetReached = true; toast('目标时间已到'); if (!native) playBrowserReminder(); }
       if (remaining > 0) lastTargetReached = false;
       requestAnimationFrame(tick);
     }

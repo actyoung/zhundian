@@ -12,16 +12,11 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.graphics.drawable.GradientDrawable;
-import android.media.AudioManager;
-import android.media.ToneGenerator;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
-import android.os.VibratorManager;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -66,7 +61,6 @@ public final class OverlayService extends Service {
             long now = System.currentTimeMillis();
             clockDate.setTime(now);
             digits.setTime(clockFormat.format(clockDate));
-            checkTarget(now);
             handler.postDelayed(this, powerManager.isInteractive() ? 16 : 1000);
         }
     };
@@ -247,30 +241,6 @@ public final class OverlayService extends Service {
         params.x = Math.max(0, Math.min(params.x, screen.x - overlay.getWidth()));
         params.y = Math.max(0, Math.min(params.y, screen.y - overlay.getHeight()));
         windowManager.updateViewLayout(overlay, params);
-    }
-
-    private void checkTarget(long now) {
-        SharedPreferences prefs = getSharedPreferences("clock", MODE_PRIVATE);
-        long target = prefs.getLong("targetMillis", 0);
-        if (target == 0 || now < target || now - target > 2000
-                || prefs.getLong("lastAlertedTarget", 0) == target) return;
-        prefs.edit().putLong("lastAlertedTarget", target).apply();
-        if (prefs.getBoolean("vibrate", true)) {
-            Vibrator vibrator;
-            if (Build.VERSION.SDK_INT >= 31) {
-                vibrator = getSystemService(VibratorManager.class).getDefaultVibrator();
-            } else {
-                vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-            }
-            if (vibrator != null && vibrator.hasVibrator()) {
-                vibrator.vibrate(VibrationEffect.createOneShot(150, VibrationEffect.DEFAULT_AMPLITUDE));
-            }
-        }
-        if (prefs.getBoolean("sound", false)) {
-            ToneGenerator tone = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, 75);
-            tone.startTone(ToneGenerator.TONE_PROP_BEEP, 150);
-            handler.postDelayed(tone::release, 300);
-        }
     }
 
     private int dp(float value) {

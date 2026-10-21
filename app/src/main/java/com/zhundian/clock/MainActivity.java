@@ -90,6 +90,7 @@ public class MainActivity extends Activity {
             pendingStart = false;
             launchOverlay();
         }
+        ReminderScheduler.schedule(this);
         syncToPage();
     }
 
@@ -111,6 +112,8 @@ public class MainActivity extends Activity {
         boolean permission = Settings.canDrawOverlays(this);
         boolean running = OverlayService.isRunning();
         webView.evaluateJavascript("window.nativeOverlayStatus && window.nativeOverlayStatus(" + running + "," + permission + ")", null);
+        webView.evaluateJavascript("window.nativeReminderStatus && window.nativeReminderStatus("
+                + ReminderScheduler.canScheduleExact(this) + "," + ReminderScheduler.isArmed(this) + ")", null);
     }
 
     private void requestPermission(boolean startAfterGrant) {
@@ -144,16 +147,29 @@ public class MainActivity extends Activity {
     private void saveConfig(String json) {
         try {
             JSONObject data = new JSONObject(json);
-            SharedPreferences.Editor editor = getSharedPreferences("clock", MODE_PRIVATE).edit();
+            SharedPreferences preferences = getSharedPreferences("clock", MODE_PRIVATE);
+            boolean vibrate = data.optBoolean("vibrate", true);
+            boolean sound = data.optBoolean("sound", false);
+            String target = data.optString("target", "");
+            long targetMillis = target.isEmpty() ? 0 : Instant.parse(target).toEpochMilli();
+            boolean reminderChanged = preferences.getLong("targetMillis", 0) != targetMillis
+                    || preferences.getBoolean("vibrate", true) != vibrate
+                    || preferences.getBoolean("sound", false) != sound;
+            SharedPreferences.Editor editor = preferences.edit();
             editor.putInt("size", data.optInt("size", 1));
             editor.putInt("opacity", data.optInt("opacity", 65));
             editor.putBoolean("noBg", data.optBoolean("noBg", false));
             editor.putBoolean("safeMode", data.optBoolean("safeMode", false));
-            editor.putBoolean("vibrate", data.optBoolean("vibrate", true));
-            editor.putBoolean("sound", data.optBoolean("sound", false));
-            String target = data.optString("target", "");
-            if (!target.isEmpty()) editor.putLong("targetMillis", Instant.parse(target).toEpochMilli());
-            editor.apply();
+            editor.putBoolean("vibrate", vibrate);
+            editor.putBoolean("sound", sound);
+            editor.putLong("targetMillis", targetMillis);
+            if (reminderChanged) {
+                editor.commit();
+                ReminderScheduler.schedule(this);
+                syncToPage();
+            } else {
+                editor.apply();
+            }
             if (OverlayService.isRunning() && data.optBoolean("active", false)) {
                 Intent refresh = new Intent(this, OverlayService.class);
                 refresh.setAction(OverlayService.ACTION_REFRESH);
@@ -189,6 +205,30 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void requestPermission() {
             runOnUiThread(() -> MainActivity.this.requestPermission(false));
+        }
+
+        @JavascriptInterface
+        public void requestExactAlarmPermission() {
+            runOnUiThread(() -> {
+                if (ReminderScheduler.canScheduleExact(MainActivity.this)) {
+                    syncToPage();
+                    return;
+                }
+                try {
+                    startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                            Uri.parse("package:" + getPackageName())));
+                } catch (Exception exception) {
+                    webView.evaluateJavascript("window.nativeReminderError && window.nativeReminderError('无法打开精确提醒授权页面')", null);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void testReminder(String json) {
+            runOnUiThread(() -> {
+                MainActivity.this.saveConfig(json);
+                new Thread(() -> ReminderScheduler.test(getApplicationContext()), "reminder-preview").start();
+            });
         }
 
         @JavascriptInterface
