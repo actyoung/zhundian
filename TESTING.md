@@ -7,6 +7,8 @@
 - Android 11 模拟器：原生首页当前时间和倒计时持续更新，主要操作按钮在 360 × 640 dp 首屏可见；设置、外观、悬浮位置页和目标时间弹层已截图检查。
 - Android 11 模拟器：位置页能启动实际悬浮服务；防误触使悬浮窗口使用 `NOT_FOCUSABLE NOT_TOUCHABLE` 和 `alpha=0.79`。
 - Android 11 模拟器：通过原生目标时间弹层选取“约 5 分钟后”后，系统闹钟登记为对应的 `Alarm clock` 目标时刻。
+- Android 16 小米手机：通过系统文件管理器更新到 `1.1.0`（versionCode 4）；原生首页正常启动并截图检查，当前时间、目标时刻、倒计时和底部导航均可见，无启动崩溃。
+- Android 16 小米手机：`SCHEDULE_EXACT_ALARM` 仍为 `allow`；系统闹钟队列已登记当天 `13:00:00.000` 的 `RTC_WAKEUP`/`Alarm clock`，`exactAllowReason=permission`。
 
 ## 1.0.2 原生提醒
 
