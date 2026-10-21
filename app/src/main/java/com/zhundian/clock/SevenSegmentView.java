@@ -18,6 +18,8 @@ public final class SevenSegmentView extends View {
     private float digitHeight;
     private float gap;
     private float separatorWidth;
+    private float displayScale = 1f;
+    private int currentSize = 1;
 
     public SevenSegmentView(Context context) {
         super(context);
@@ -29,13 +31,18 @@ public final class SevenSegmentView extends View {
     }
 
     public void setSize(int size) {
-        int bounded = Math.max(0, Math.min(2, size));
-        digitWidth = dp(12 + bounded * 2);
-        digitHeight = dp(22 + bounded * 4);
-        gap = dp(1.4f);
-        separatorWidth = dp(5 + bounded);
+        currentSize = Math.max(0, Math.min(2, size));
+        digitWidth = dp((12 + currentSize * 2) * displayScale);
+        digitHeight = dp((22 + currentSize * 4) * displayScale);
+        gap = dp(1.4f * displayScale);
+        separatorWidth = dp((5 + currentSize) * displayScale);
         requestLayout();
         invalidate();
+    }
+
+    public void setDisplayScale(float scale) {
+        displayScale = Math.max(.6f, Math.min(2.2f, scale));
+        setSize(currentSize);
     }
 
     public void setTime(String value) {
@@ -47,23 +54,23 @@ public final class SevenSegmentView extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        float width = 9 * digitWidth + 3 * separatorWidth + 11 * gap + dp(2);
+        float width = 9 * digitWidth + 3 * separatorWidth + 11 * gap + dp(2 * displayScale);
         setMeasuredDimension(resolveSize((int) Math.ceil(width), widthMeasureSpec),
-                resolveSize((int) Math.ceil(digitHeight + dp(8)), heightMeasureSpec));
+                resolveSize((int) Math.ceil(digitHeight + dp(8 * displayScale)), heightMeasureSpec));
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        float x = dp(1);
-        float y = dp(4);
+        float x = dp(1 * displayScale);
+        float y = dp(4 * displayScale);
         for (int i = 0; i < time.length(); i++) {
             char character = time.charAt(i);
             if (character >= '0' && character <= '9') {
                 drawDigit(canvas, x, y, SEGMENTS[character - '0']);
                 x += digitWidth + gap;
             } else {
-                float radius = dp(1.65f);
+                float radius = dp(1.65f * displayScale);
                 if (character == ':') {
                     canvas.drawCircle(x + separatorWidth / 2, y + digitHeight * .34f, radius, paint);
                     canvas.drawCircle(x + separatorWidth / 2, y + digitHeight * .69f, radius, paint);

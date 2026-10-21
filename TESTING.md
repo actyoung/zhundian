@@ -1,5 +1,15 @@
 # 验证记录
 
+## 1.1.0 原生界面
+
+- Kotlin Android View 已替换首页、目标时间弹层、悬浮位置、外观与设置页面；APK 资源中只有 `clock-grid.png`，无 HTML、JS、字体文件或 WebView 调用。
+- `scripts/build-local.sh` 构建并通过 APK v2/v3 签名校验；`./gradlew assembleDebug` 标准构建成功。
+- Android 11 模拟器：原生首页当前时间和倒计时持续更新，主要操作按钮在 360 × 640 dp 首屏可见；设置、外观、悬浮位置页和目标时间弹层已截图检查。
+- Android 11 模拟器：位置页能启动实际悬浮服务；防误触使悬浮窗口使用 `NOT_FOCUSABLE NOT_TOUCHABLE` 和 `alpha=0.79`。
+- Android 11 模拟器：通过原生目标时间弹层选取“约 5 分钟后”后，系统闹钟登记为对应的 `Alarm clock` 目标时刻。
+
+## 1.0.2 原生提醒
+
 - `scripts/build-local.sh`：构建成功；APK 签名 v2/v3 校验通过。
 - APK 元信息：`com.zhundian.clock`，版本 `1.0.2`，最低 API 26，目标 API 36，包含精确闹钟与开机重排权限。
 - Android 11 模拟器：主界面、目标时间弹层、“约 5 分钟后”快捷目标和倒计时已检查。

@@ -1,6 +1,6 @@
 # 准点 Android
 
-毫秒数字时钟与跨应用悬浮窗。主界面使用已确认的深色精密仪表设计；悬浮窗和到点提醒由 Android 原生代码实现。
+毫秒数字时钟与跨应用悬浮窗。1.1.0 起，首页、目标时间选择、悬浮位置、外观和设置均由 Kotlin 原生 Android View 构建，不再使用 WebView。悬浮窗和到点提醒继续由 Android 原生服务实现。
 
 ## 功能
 
@@ -12,10 +12,9 @@
 
 ## 构建
 
-Android Studio 打开本目录并构建 `app`。项目使用 Java 17、Android Gradle Plugin 8.9.2、compile SDK 36、target SDK 36。
+Android Studio 打开本目录并构建 `app`。项目使用 Kotlin 1.9.25、Java 17、Android Gradle Plugin 8.9.2、compile SDK 36、target SDK 36。`./gradlew assembleDebug` 已通过。
 
-本机另提供 `scripts/build-local.sh`，直接用 Android SDK 37.0 的 `aapt2`、`d8` 和 `apksigner` 生成调试包，输出为 `dist/zhundian-debug.apk`。该脚本生成的调试签名仅供测试，不用于发布。
-本次已用该脚本构建并在 Android 11 模拟器运行；Gradle 的在线依赖下载尚未完成，Android Studio/Gradle 构建需另行验证。
+本机另提供 `scripts/build-local.sh`，使用已缓存的 Kotlin 编译器和 Android SDK 的 `aapt2`、`d8`、`apksigner` 生成调试包，输出为 `dist/zhundian-debug.apk`。该脚本沿用先前测试包的本地调试签名，便于覆盖安装；不用于发布。标准 Gradle 调试包采用另一份调试签名，不能直接覆盖该本地测试包。
 
 安装调试包后，在应用内点“开启悬浮时钟”，按系统提示授予“显示在其他应用上层”权限。授权返回后应用会自动开启悬浮窗并显示位置页；关闭防误触即可直接拖动定位。切到 App 的其他页面时悬浮窗隐藏，切到其他应用时继续显示。
 
